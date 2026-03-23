@@ -1,0 +1,4 @@
+from server.prompt_text import DEFAULT_COLORIZE_PROMPT
+
+
+DEFAULT_PROMPT = DEFAULT_COLORIZE_PROMPT

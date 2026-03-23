@@ -1,0 +1,26 @@
+[
+  {
+    "id": "crop-only",
+    "prompt": "Crop this screenshot to the visible frame.",
+    "image_count": 1,
+    "expected_workflow": "crop_images",
+    "expected_tool_sequence": ["crop_images"],
+    "expected_output_count": 1
+  },
+  {
+    "id": "colorize-only",
+    "prompt": "Colorize this black and white image realistically.",
+    "image_count": 1,
+    "expected_workflow": "colorize_images",
+    "expected_tool_sequence": ["colorize_images"],
+    "expected_output_count": 1
+  },
+  {
+    "id": "crop-then-colorize",
+    "prompt": "Crop this screenshot and then colorize it realistically.",
+    "image_count": 1,
+    "expected_workflow": "crop_then_colorize",
+    "expected_tool_sequence": ["crop_images", "colorize_images"],
+    "expected_output_count": 2
+  }
+]

@@ -1,15 +1,21 @@
 # autoresearch
 
-`autoresearch` adapts the experimentation pattern from [`autoresearch-macos`](https://github.com/miolini/autoresearch-macos) to this portfolio's actual target: improving skill documents, prompts, and tool-use instructions over time without weakening security or breaking the baseline contract measured by `evals-101`.
+`autoresearch` adapts the experimentation pattern from [`autoresearch-macos`](https://github.com/miolini/autoresearch-macos) to this portfolio's actual target: improving skill documents, prompts, and tool-use instructions over time without weakening security or breaking the bundled evaluation baseline.
 
-## Why `autoresearch` exists inside `autoresearch`
+## Standalone layout
 
-This repo uses a standard Python package layout. The outer folder is the repository root. The inner `autoresearch/` folder is the importable Python package used by the CLI and tests.
+This repo uses a standard Python package layout and now ships with its own local experiment surface:
+
+- `targets/skills-201/`: bundled skill docs used by the default research loop
+- `targets/mcp-201-prompts/`: a tiny future prompt-only surface
+- `datasets/`: bundled gate and nightly evaluation datasets
+
+That means a fresh clone can run without sibling repositories.
 
 ## Purpose
 
 - propose small, reviewable changes to prompts, policies, or skill documents
-- run `evals-101` gate suites before any broader comparison
+- run bundled deterministic gate suites before any broader comparison
 - accept changes only when they improve the tracked score and introduce no new regressions
 - keep a clean append-only experiment ledger with redacted metadata
 
@@ -17,9 +23,12 @@ This repo uses a standard Python package layout. The outer folder is the reposit
 
 - `research_program.md`: human-owned constraints and optimization targets
 - `autoresearch/models.py`: experiment and evaluation data models
+- `autoresearch/evals.py`: standalone eval contracts, graders, and runners
 - `autoresearch/storage.py`: append-only JSONL experiment ledger
 - `autoresearch/loop.py`: constrained research loop with gate-first acceptance logic
 - `autoresearch/cli.py`: command-line entrypoint
+- `datasets/`: bundled gate and nightly datasets
+- `targets/`: local editable skill and prompt surfaces used by the loop
 - `tests/`: unit tests for the loop and acceptance logic
 - `scripts/setup_local.sh`: local bootstrap
 - `scripts/run_local.sh`: run one local research iteration
@@ -31,7 +40,7 @@ This repo uses a standard Python package layout. The outer folder is the reposit
 - no direct production writes from the loop itself
 - restricted editable surface defined in `research_program.md`
 - no credential persistence
-- deterministic eval gates must pass before broader scoring matters
+- deterministic bundled gates must pass before broader scoring matters
 - no SQL script generation
 
 ## Prerequisites
@@ -53,7 +62,7 @@ Run one local iteration:
 ./scripts/run_local.sh
 ```
 
-That writes an append-only JSONL record to `experiments/history.jsonl`.
+That writes an append-only JSONL record to `experiments/history.jsonl` while evaluating candidates against the bundled target surface in `targets/skills-201`.
 
 Run tests:
 
@@ -81,7 +90,7 @@ docker run --rm -v "$(pwd)/experiments:/app/experiments" autoresearch:local
 
 1. load the optimization rules from `research_program.md`
 2. propose a bounded change
-3. run `evals-101` gate checks
+3. run bundled gate checks
 4. reject any change with security regressions
 5. accept only changes that beat the current baseline score
 6. record every attempt in the ledger for later review

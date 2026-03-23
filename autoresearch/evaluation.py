@@ -4,10 +4,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from evals_101.contracts import MCP101_BASELINE
-from evals_101.runners import Skills201Runner
-
 from .config import SKILLS_201_GATE_DATASET, SKILLS_201_NIGHTLY_DATASET
+from .evals import MCP101_BASELINE, Skills201Runner
 from .models import EvalScore
 
 

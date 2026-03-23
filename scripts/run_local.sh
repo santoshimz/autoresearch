@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+. .venv/bin/activate
+python -m autoresearch.cli --ledger experiments/history.jsonl

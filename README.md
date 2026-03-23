@@ -1,78 +1,138 @@
 # autoresearch
 
-`autoresearch` adapts the experimentation pattern from [`autoresearch-macos`](https://github.com/miolini/autoresearch-macos) to this portfolio's actual target: improving skill documents, prompts, and tool-use instructions over time without weakening security or breaking the bundled evaluation baseline.
+`autoresearch` is a bounded research worker for agent-facing content. Instead of mutating application code directly, it proposes small changes to prompts, skill docs, and tool-use guidance, runs deterministic evaluations, rejects unsafe regressions, and records every attempt in an append-only ledger.
 
-## Standalone layout
+The goal is to make prompt and skill iteration measurable, reviewable, and secure.
 
-This repo uses a standard Python package layout and now ships with its own local experiment surface:
+![Autoresearch doodle](docs/autoresearch-doodle.svg)
 
-- `targets/skills-201/`: bundled skill docs used by the default research loop
-- `targets/mcp-201-prompts/`: a tiny future prompt-only surface
-- `datasets/`: bundled gate and nightly evaluation datasets
+For the longer onboarding brief, read `docs/agent-handoff.md`.
 
-That means a fresh clone can run without sibling repositories.
+## What this project does
 
-## Purpose
+On each run, the worker:
 
-- propose small, reviewable changes to prompts, policies, or skill documents
-- run bundled deterministic gate suites before any broader comparison
-- accept changes only when they improve the tracked score and introduce no new regressions
-- keep a clean append-only experiment ledger with redacted metadata
+1. reads the optimization constraints from `research_program.md`
+2. proposes a bounded candidate edit to the approved text surface
+3. evaluates the untouched baseline and each candidate in isolation
+4. rejects anything that weakens security or fails deterministic gates
+5. accepts only the best score-improving candidate
+6. appends all results to `experiments/history.jsonl`
 
-## Repository layout
+This is intentionally not a general autonomous code editor. The default mutation surface is agent-readable text.
 
-- `research_program.md`: human-owned constraints and optimization targets
-- `autoresearch/models.py`: experiment and evaluation data models
-- `autoresearch/evals.py`: standalone eval contracts, graders, and runners
-- `autoresearch/storage.py`: append-only JSONL experiment ledger
-- `autoresearch/loop.py`: constrained research loop with gate-first acceptance logic
+## Why the repo is structured this way
+
+The repository is self-contained so a fresh clone can run locally without sibling repos:
+
+- `targets/skills-201/` is the main bundled mutation surface
+- `targets/mcp-201-prompts/` is a downstream prompt-routing surface used to make the portfolio more realistic
+- `datasets/` contains the bundled deterministic gate and nightly evaluation data
+
+That layout lets you test the research loop locally before worrying about deployment or wider portfolio integration.
+
+## How the pieces fit together
+
+- `research_program.md`: human-owned guardrails, editable surface, and acceptance policy
+- `autoresearch/loop.py`: orchestrates baseline evaluation, candidate evaluation, ranking, and acceptance
+- `autoresearch/strategy.py`: generates the bounded prompt and skill changes
+- `autoresearch/workspace.py`: creates isolated temp workspaces so source files are not mutated during evaluation
+- `autoresearch/evaluation.py`: runs the `Skills201EvalGateway` with gate-first logic
+- `autoresearch/storage.py`: stores experiment history and derives the current accepted baseline
 - `autoresearch/cli.py`: command-line entrypoint
-- `datasets/`: bundled gate and nightly datasets
-- `targets/`: local editable skill and prompt surfaces used by the loop
-- `tests/`: unit tests for the loop and acceptance logic
-- `scripts/setup_local.sh`: local bootstrap
-- `scripts/run_local.sh`: run one local research iteration
-- `scripts/run_tests.sh`: unit-test wrapper
-- `scripts/deploy_docker.sh`: build a container image for scheduled workers
+- `tests/`: unit tests covering the loop and acceptance behavior
+- `scripts/`: setup, test, local run, and container build helpers
 
-## Guardrails
+## `skills-201` vs `mcp-201`
 
-- no direct production writes from the loop itself
-- restricted editable surface defined in `research_program.md`
-- no credential persistence
-- deterministic bundled gates must pass before broader scoring matters
+The repo has two important bundled surfaces:
+
+- `skills-201` is the current primary optimization target. It contains the skill docs and README material that the loop edits and scores.
+- `mcp-201-prompts` is a smaller prompt-routing surface for image workflows. It models cases like crop only, colorize only, or crop-then-colorize, and includes guidance that `colorize_images` may use either a server Gemini key or an ephemeral BYOK flow.
+
+Today, `mcp-201` is useful project context and a likely downstream validation surface. It is not yet the main mutation target.
+
+## Security and operating guardrails
+
+These constraints are central to the project:
+
+- no direct production writes from the loop
+- no secret persistence
+- no bypass of RLS or other security controls
+- no widening of the editable surface without explicit approval
+- deterministic gates must pass before broader scoring matters
 - no SQL script generation
 
-## Prerequisites
+If you are new to the repo, these guardrails matter as much as the scoring logic.
+
+## Local setup
+
+Prerequisites:
 
 - Python 3.11+
 - `pip`
 
-## Local setup
+Bootstrap the local environment:
 
 ```bash
 ./scripts/setup_local.sh
 ```
 
-## Run locally
+What this should give you:
 
-Run one local iteration:
+- a local virtual environment
+- the package installed in editable mode
+- a repo that is ready to run tests and one research iteration
 
-```bash
-./scripts/run_local.sh
-```
+## Run the project locally
 
-That writes an append-only JSONL record to `experiments/history.jsonl` while evaluating candidates against the bundled target surface in `targets/skills-201`.
-
-Run tests:
+Run the test suite first:
 
 ```bash
 ./scripts/run_tests.sh
 ```
 
-## Deployment
+Run one local research iteration:
 
-This repo is designed for a scheduled worker model rather than a browser app. The normal deployment target is a container or job runner that wakes up, proposes a bounded change, runs evals, records the outcome, and exits.
+```bash
+./scripts/run_local.sh
+```
+
+Expected outcome:
+
+- the loop evaluates the baseline plus bounded candidates
+- deterministic gates run before broader scoring
+- the best acceptable candidate is reported
+- results are appended to `experiments/history.jsonl`
+
+Render a static HTML report from the ledger:
+
+```bash
+./scripts/render_report.sh
+```
+
+That writes `experiments/report.html`, which gives you summary cards, a score trend, and a table of recorded candidates.
+
+You can also run the CLI directly after activation:
+
+```bash
+. .venv/bin/activate
+python -m autoresearch.cli --ledger experiments/history.jsonl
+```
+
+## What success looks like
+
+After reading this README and following the setup steps, you should understand:
+
+- this repo improves agent docs and prompts, not product code
+- the worker is intentionally bounded and security-first
+- `skills-201` is the main editable target today
+- `mcp-201` provides realistic downstream workflow context around image routing and Gemini-backed colorization
+- a successful local run writes an append-only experiment record instead of silently mutating the target files
+
+## Deployment model
+
+This project is designed as a scheduled worker, not a browser app. The typical deployment target is a container or job runner that wakes up, proposes a bounded change, runs evals, records the outcome, and exits.
 
 Build the container image:
 
@@ -86,11 +146,12 @@ Example container run:
 docker run --rm -v "$(pwd)/experiments:/app/experiments" autoresearch:local
 ```
 
-## Operating model
+## If you need deeper context
 
-1. load the optimization rules from `research_program.md`
-2. propose a bounded change
-3. run bundled gate checks
-4. reject any change with security regressions
-5. accept only changes that beat the current baseline score
-6. record every attempt in the ledger for later review
+Use `docs/agent-handoff.md` for:
+
+- a faster architecture handoff
+- runtime flow details
+- what the eval measures today
+- gaps that are still not implemented
+- the safest next extensions

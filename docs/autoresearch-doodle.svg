@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Autoresearch project overview</title>
+  <desc id="desc">A clean system diagram showing how autoresearch proposes bounded documentation changes, evaluates them safely, validates downstream mcp-201 prompt behavior, and records outcomes in an append-only ledger.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8fbff"/>
+      <stop offset="100%" stop-color="#f6f8fc"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+    <style>
+      .bg { fill: url(#bg); }
+      .panel { fill: #ffffff; stroke: #d7e0ec; stroke-width: 2; }
+      .panel-blue { fill: #eff6ff; stroke: #bfdbfe; stroke-width: 2; }
+      .panel-green { fill: #ecfdf5; stroke: #a7f3d0; stroke-width: 2; }
+      .panel-amber { fill: #fffbeb; stroke: #fde68a; stroke-width: 2; }
+      .shadow { filter: drop-shadow(0 10px 24px rgba(15, 23, 42, 0.08)); }
+      .title { font: 700 34px Inter, Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 18px Inter, Arial, sans-serif; fill: #475569; }
+      .section { font: 700 22px Inter, Arial, sans-serif; fill: #0f172a; }
+      .meta { font: 600 15px Inter, Arial, sans-serif; fill: #2563eb; }
+      .body { font: 400 16px Inter, Arial, sans-serif; fill: #334155; }
+      .caption { font: 600 14px Inter, Arial, sans-serif; fill: #0f766e; }
+      .arrow { stroke: #64748b; stroke-width: 3.5; fill: none; marker-end: url(#arrow); stroke-linecap: round; }
+      .divider { stroke: #cbd5e1; stroke-width: 2; stroke-dasharray: 8 8; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1200" height="760" rx="28"/>
+
+  <text x="56" y="70" class="title">autoresearch at a glance</text>
+  <text x="56" y="104" class="subtitle">A bounded worker that improves agent docs and prompts without silently mutating product code.</text>
+
+  <rect x="56" y="146" width="250" height="154" rx="20" class="panel-amber shadow"/>
+  <text x="84" y="186" class="section">1. Rules</text>
+  <text x="84" y="214" class="meta">research_program.md</text>
+  <text x="84" y="244" class="body">
+    <tspan x="84" dy="0">Defines the editable surface,</tspan>
+    <tspan x="84" dy="24">security limits, and the</tspan>
+    <tspan x="84" dy="24">acceptance policy.</tspan>
+  </text>
+
+  <rect x="352" y="146" width="310" height="154" rx="20" class="panel-blue shadow"/>
+  <text x="380" y="186" class="section">2. Candidate changes</text>
+  <text x="380" y="214" class="meta">autoresearch/strategy.py</text>
+  <text x="380" y="244" class="body">
+    <tspan x="380" dy="0">Proposes small, reviewable edits</tspan>
+    <tspan x="380" dy="24">to skills, prompts, and guidance</tspan>
+    <tspan x="380" dy="24">instead of broad code mutation.</tspan>
+  </text>
+
+  <rect x="708" y="146" width="210" height="154" rx="20" class="panel shadow"/>
+  <text x="736" y="186" class="section">3. Sandbox</text>
+  <text x="736" y="214" class="meta">temp workspace</text>
+  <text x="736" y="244" class="body">
+    <tspan x="736" dy="0">Each candidate is</tspan>
+    <tspan x="736" dy="24">applied and scored</tspan>
+    <tspan x="736" dy="24">in isolation.</tspan>
+  </text>
+
+  <rect x="964" y="146" width="180" height="154" rx="20" class="panel-green shadow"/>
+  <text x="992" y="186" class="section">5. Ledger</text>
+  <text x="992" y="214" class="meta">history.jsonl</text>
+  <text x="992" y="244" class="body">
+    <tspan x="992" dy="0">Every attempt is</tspan>
+    <tspan x="992" dy="24">recorded for audit</tspan>
+    <tspan x="992" dy="24">and baseline tracking.</tspan>
+  </text>
+
+  <rect x="420" y="392" width="380" height="192" rx="22" class="panel shadow"/>
+  <text x="452" y="436" class="section">4. Eval gateway</text>
+  <text x="452" y="466" class="meta">gate first, nightly second</text>
+  <text x="452" y="500" class="body">
+    <tspan x="452" dy="0">Rejects security regressions.</tspan>
+    <tspan x="452" dy="26">Requires deterministic gate passes.</tspan>
+    <tspan x="452" dy="26">Accepts only score-improving candidates.</tspan>
+    <tspan x="452" dy="26">Keeps the best valid result as baseline.</tspan>
+  </text>
+
+  <rect x="56" y="392" width="312" height="132" rx="20" class="panel-blue shadow"/>
+  <text x="84" y="432" class="section">Downstream context</text>
+  <text x="84" y="460" class="meta">targets/mcp-201-prompts</text>
+  <text x="84" y="490" class="body">
+    <tspan x="84" dy="0">Models image workflow routing:</tspan>
+    <tspan x="84" dy="24">crop, colorize, or compose both.</tspan>
+  </text>
+
+  <rect x="56" y="552" width="312" height="132" rx="20" class="panel-amber shadow"/>
+  <text x="84" y="592" class="section">Gemini note</text>
+  <text x="84" y="620" class="meta">colorize_images</text>
+  <text x="84" y="650" class="body">
+    <tspan x="84" dy="0">May use a server Gemini key or</tspan>
+    <tspan x="84" dy="24">an ephemeral BYOK flow. Keys</tspan>
+    <tspan x="84" dy="24">must never be persisted.</tspan>
+  </text>
+
+  <path d="M306 223 C324 223, 332 223, 352 223" class="arrow"/>
+  <path d="M662 223 C680 223, 688 223, 708 223" class="arrow"/>
+  <path d="M918 223 C936 223, 944 223, 964 223" class="arrow"/>
+  <path d="M813 300 C813 344, 765 360, 716 392" class="arrow"/>
+  <path d="M368 458 C390 458, 400 458, 420 458" class="arrow"/>
+  <path d="M800 488 C880 488, 924 394, 1012 300" class="arrow"/>
+  <path d="M212 524 C212 536, 212 542, 212 552" class="arrow"/>
+
+  <line x1="392" y1="620" x2="1144" y2="620" class="divider"/>
+  <text x="420" y="652" class="caption">Only promote winners that are safer, clearer, and measurably better.</text>
+</svg>

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import tempfile
@@ -97,12 +98,14 @@ class WebTests(unittest.TestCase):
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
 
-            html = None
+            app_html = None
+            embed_html = None
             history = None
             try:
                 for _ in range(20):
                     try:
-                        html = request.urlopen(f"http://127.0.0.1:{port}/").read().decode("utf-8")
+                        app_html = request.urlopen(f"http://127.0.0.1:{port}/app").read().decode("utf-8")
+                        embed_html = request.urlopen(f"http://127.0.0.1:{port}/report/embed").read().decode("utf-8")
                         history = json.loads(
                             request.urlopen(f"http://127.0.0.1:{port}/api/history").read().decode("utf-8")
                         )
@@ -110,13 +113,40 @@ class WebTests(unittest.TestCase):
                     except Exception:
                         time.sleep(0.1)
 
-                self.assertIsNotNone(html)
-                self.assertIsNotNone(history)
-                self.assertIn("Autoresearch Experiment Report", html)
-                self.assertIn("Run disabled", html)
+                self.assertIsNotNone(app_html)
+                self.assertIsNotNone(embed_html)
+                self.assertIn("Autoresearch workspace", app_html)
+                self.assertIn("Run once (library)", app_html)
+                self.assertIn("Autoresearch Experiment Report", embed_html)
+                self.assertNotIn("Live Controls", embed_html)
                 self.assertEqual(history["summary"]["total_runs"], 1)
                 self.assertFalse(history["run_controls"]["enabled"])
                 self.assertTrue(report_path.exists())
+            finally:
+                server.shutdown()
+                server.server_close()
+
+    def test_root_redirects_to_app(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            settings = WebSettings(
+                ledger_path=tmp_path / "history.jsonl",
+                report_path=tmp_path / "report.html",
+                host="127.0.0.1",
+                port=0,
+            )
+            server = create_server(settings)
+            _, port = server.server_address
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                conn.request("GET", "/")
+                response = conn.getresponse()
+                self.assertEqual(response.status, 302)
+                location = response.getheader("Location", "")
+                self.assertTrue(location.endswith("/app"))
+                conn.close()
             finally:
                 server.shutdown()
                 server.server_close()
@@ -211,6 +241,30 @@ class WebTests(unittest.TestCase):
                 self.assertTrue(payload["ok"])
                 self.assertEqual(payload["strategy"], "library")
                 self.assertIn("accepted=True", payload["summary"])
+
+                captured: dict[str, object] = {}
+
+                def capture_runner(command, **kwargs):
+                    captured["command"] = command
+                    return SimpleNamespace(returncode=0, stdout="done", stderr="")
+
+                server.run_runner = capture_runner
+                response_llm = request.urlopen(
+                    request.Request(
+                        f"http://127.0.0.1:{port}/api/run",
+                        method="POST",
+                        headers={
+                            "Authorization": "Bearer secret-token",
+                            "Content-Type": "application/json",
+                        },
+                        data=json.dumps({"strategy": "llm"}).encode("utf-8"),
+                    )
+                ).read().decode("utf-8")
+                payload_llm = json.loads(response_llm)
+                self.assertTrue(payload_llm["ok"])
+                self.assertEqual(payload_llm["strategy"], "llm")
+                self.assertIn("--strategy", captured["command"])
+                self.assertIn("llm", captured["command"])
             finally:
                 server.shutdown()
                 server.server_close()

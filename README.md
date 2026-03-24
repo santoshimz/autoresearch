@@ -119,19 +119,24 @@ You can also view the report through a tiny local web server:
 ./scripts/run_web.sh
 ```
 
-Then open `http://localhost:8000`.
+Then open `http://localhost:8000/app` (or `http://localhost:8000`, which redirects to `/app`).
 
-The server exposes:
+The layout follows the same idea as **evals-101**: sidebar for access and run actions, separate report viewer.
 
-- `/` or `/report.html`: rendered HTML report
-- `/api/history`: raw ledger data plus summary JSON
+Routes:
+
+- `/app`: workspace UI (token field, **Run once (library)** / **Run once (LLM)**, ledger filter, link to raw JSON)
+- `/report/embed`: **only** the rendered experiment report HTML (no injected controls), used by the in-page iframe
+- `/` → redirects to `/app`; `/report` and `/report.html` → redirect to `/report/embed`
+- `/api/history`: ledger JSON plus `strategy_tag` per row and `library_runs` / `llm_runs` counts in `summary`
 - `/health`: lightweight health check
 
-To enable a `Run Once Now` button in the web UI:
+To enable runs from the UI:
 
 - set `AUTORESEARCH_WEB_ENABLE_RUN=1`
-- optional: set `AUTORESEARCH_WEB_RUN_STRATEGY=llm` to trigger the LLM-backed strategy instead of the default library strategy
-- if you use LLM mode, also provide the required LLM env vars such as `AUTORESEARCH_GEMINI_API_KEY`
+- set `AUTORESEARCH_WEB_RUN_TOKEN` and paste the same value in the UI (saved in the browser session only)
+- optional: `AUTORESEARCH_WEB_RUN_STRATEGY` is the **default** strategy when `POST /api/run` has an empty body; the two buttons send `{"strategy":"library"}` or `{"strategy":"llm"}` explicitly
+- for LLM runs, provide `AUTORESEARCH_GEMINI_API_KEY` (or your configured key env)
 
 You can also run the CLI directly after activation:
 
@@ -217,10 +222,18 @@ Useful web-mode environment variables:
 - `AUTORESEARCH_WEB_PORT`: bind port, defaults to `8000` unless Railway provides `PORT`
 - `AUTORESEARCH_WEB_ENABLE_RUN`: optional override, defaults to enabled on Railway
 - `AUTORESEARCH_WEB_RUN_TOKEN`: bearer token required for `POST /api/run`
-- `AUTORESEARCH_WEB_RUN_STRATEGY`: `library` or `llm`, defaults to `llm` on Railway
+- `AUTORESEARCH_WEB_RUN_STRATEGY`: default for `POST /api/run` when the JSON body omits `strategy` (or body is empty); the `/app` UI always sends an explicit `strategy`
 - `AUTORESEARCH_WEB_RUN_TIMEOUT_SECONDS`: timeout for UI-triggered runs, defaults to `600`
 
-Example trigger call:
+Example trigger calls:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $AUTORESEARCH_WEB_RUN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"strategy":"llm"}' \
+  https://<your-service-domain>/api/run
+```
 
 ```bash
 curl -X POST \

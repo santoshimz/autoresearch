@@ -1,0 +1,8 @@
+/.git
+/.venv
+/.cursor
+/.DS_Store
+/experiments
+/*.egg-info
+**/__pycache__
+**/*.pyc

@@ -25,6 +25,8 @@ class CandidateWorkspace:
 
     def _copy_source_tree(self, destination_root: Path) -> None:
         for source_path in self.approved_files:
+            if not source_path.exists():
+                continue
             relative_path = source_path.relative_to(self.source_root)
             destination_path = destination_root / relative_path
             destination_path.parent.mkdir(parents=True, exist_ok=True)

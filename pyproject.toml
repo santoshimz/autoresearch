@@ -8,6 +8,7 @@ dependencies = []
 
 [project.scripts]
 autoresearch = "autoresearch.cli:main"
+autoresearch-web = "autoresearch.web:main"
 
 [build-system]
 requires = ["setuptools>=68"]

@@ -19,6 +19,7 @@ class CandidateChange:
     summary: str
     proposal_kind: str = "documentation"
     patches: tuple[FilePatch, ...] = ()
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

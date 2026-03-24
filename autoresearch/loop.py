@@ -4,8 +4,10 @@ import argparse
 from pathlib import Path
 from typing import Protocol
 
-from .config import SKILLS_201_PROFILE, approved_paths
+from .config import SKILLS_201_PROFILE, approved_paths, load_llm_generation_config
 from .evaluation import Skills201EvalGateway
+from .llm import GeminiTextGenerator
+from .llm_strategy import LLMProposalStrategy
 from .models import CandidateChange, EvalScore, ExperimentRecord
 from .strategy import ProposalLibraryStrategy
 from .storage import ExperimentLedger
@@ -67,14 +69,7 @@ class ResearchLoop:
                     evaluation=evaluation,
                     accepted=False,
                     baseline_score=baseline,
-                    metadata={
-                        "candidate_files": len(candidate.target_files),
-                        "patch_count": len(candidate.patches),
-                        "proposal_kind": candidate.proposal_kind,
-                        "datasets": list(evaluation.datasets),
-                        "passed_cases": evaluation.passed_cases,
-                        "total_cases": evaluation.total_cases,
-                    },
+                    metadata=self._build_record_metadata(candidate, evaluation),
                 )
             )
 
@@ -107,6 +102,40 @@ class ResearchLoop:
             self.baseline_score = baseline
         return promoted
 
+    def _build_record_metadata(self, candidate: CandidateChange, evaluation: EvalScore) -> dict[str, object]:
+        metadata: dict[str, object] = {
+            "strategy_name": type(self.strategy).__name__,
+            "candidate_files": len(candidate.target_files),
+            "patch_count": len(candidate.patches),
+            "proposal_kind": candidate.proposal_kind,
+            "datasets": list(evaluation.datasets),
+            "passed_cases": evaluation.passed_cases,
+            "total_cases": evaluation.total_cases,
+        }
+        for key, value in candidate.metadata.items():
+            metadata.setdefault(key, value)
+        return metadata
+
+
+def build_strategy(args: argparse.Namespace):
+    profile = SKILLS_201_PROFILE
+    if args.strategy == "llm":
+        settings = load_llm_generation_config(
+            provider=args.llm_provider,
+            model=args.llm_model,
+            api_key_env=args.llm_api_key_env,
+            max_candidates=args.llm_max_candidates,
+            max_patch_chars=args.llm_max_patch_chars,
+        )
+        if settings.provider != "gemini":
+            raise ValueError(f"Unsupported LLM provider {settings.provider!r}.")
+        return LLMProposalStrategy(
+            GeminiTextGenerator(model=settings.model, api_key_env=settings.api_key_env),
+            profile=profile,
+            settings=settings,
+        )
+    return ProposalLibraryStrategy(profile=profile)
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run a single autoresearch iteration.")
@@ -116,11 +145,17 @@ def main() -> None:
         help="Path to the append-only experiment ledger.",
     )
     parser.add_argument("--baseline-score", type=float)
+    parser.add_argument("--strategy", choices=("library", "llm"), default="library")
+    parser.add_argument("--llm-provider")
+    parser.add_argument("--llm-model")
+    parser.add_argument("--llm-api-key-env")
+    parser.add_argument("--llm-max-candidates", type=int)
+    parser.add_argument("--llm-max-patch-chars", type=int)
     args = parser.parse_args()
 
     workspace = CandidateWorkspace(SKILLS_201_PROFILE.root, approved_paths())
     loop = ResearchLoop(
-        strategy=ProposalLibraryStrategy(),
+        strategy=build_strategy(args),
         evaluator=Skills201EvalGateway(),
         ledger=ExperimentLedger(Path(args.ledger)),
         workspace=workspace,

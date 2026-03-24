@@ -12,6 +12,8 @@ def _read_text(path: Path) -> str:
 
 
 def _make_patch(path: Path, old_text: str, new_text: str, *, root: Path) -> FilePatch | None:
+    if not path.exists():
+        return None
     current = _read_text(path)
     if new_text in current:
         return None

@@ -113,12 +113,48 @@ Render a static HTML report from the ledger:
 
 That writes `experiments/report.html`, which gives you summary cards, a score trend, and a table of recorded candidates.
 
+You can also view the report through a tiny local web server:
+
+```bash
+./scripts/run_web.sh
+```
+
+Then open `http://localhost:8000`.
+
+The server exposes:
+
+- `/` or `/report.html`: rendered HTML report
+- `/api/history`: raw ledger data plus summary JSON
+- `/health`: lightweight health check
+
+To enable a `Run Once Now` button in the web UI:
+
+- set `AUTORESEARCH_WEB_ENABLE_RUN=1`
+- optional: set `AUTORESEARCH_WEB_RUN_STRATEGY=llm` to trigger the LLM-backed strategy instead of the default library strategy
+- if you use LLM mode, also provide the required LLM env vars such as `AUTORESEARCH_GEMINI_API_KEY`
+
 You can also run the CLI directly after activation:
 
 ```bash
 . .venv/bin/activate
 python -m autoresearch.cli --ledger experiments/history.jsonl
 ```
+
+To try the optional LLM-backed proposal path, keep deterministic eval as the acceptance gate and pass `--strategy llm`:
+
+```bash
+. .venv/bin/activate
+export AUTORESEARCH_GEMINI_API_KEY=your_key_here
+python -m autoresearch.cli --strategy llm --llm-model gemini-2.0-flash
+```
+
+Supported LLM generation settings:
+
+- `AUTORESEARCH_LLM_PROVIDER` defaults to `gemini`
+- `AUTORESEARCH_LLM_MODEL` defaults to `gemini-2.0-flash`
+- `AUTORESEARCH_LLM_API_KEY_ENV` defaults to `AUTORESEARCH_GEMINI_API_KEY`
+- `AUTORESEARCH_LLM_MAX_CANDIDATES` defaults to `4`
+- `AUTORESEARCH_LLM_MAX_PATCH_CHARS` defaults to `1600`
 
 ## What success looks like
 
@@ -132,7 +168,7 @@ After reading this README and following the setup steps, you should understand:
 
 ## Deployment model
 
-This project is designed as a scheduled worker, not a browser app. The typical deployment target is a container or job runner that wakes up, proposes a bounded change, runs evals, records the outcome, and exits.
+This project is designed primarily as a scheduled worker, but it can also expose a tiny report viewer over HTTP for local use or simple Railway deployments.
 
 Build the container image:
 
@@ -145,6 +181,54 @@ Example container run:
 ```bash
 docker run --rm -v "$(pwd)/experiments:/app/experiments" autoresearch:local
 ```
+
+### Railway
+
+Railway can run this repo as a worker service using the included `Dockerfile`.
+The repo now also includes `railway.toml` so the build, start command, and health check can stay in code.
+
+Recommended Railway setup:
+
+- attach a volume at `/data`
+- by default, Railway deployments now assume web mode and `/data` storage
+- set `AUTORESEARCH_GEMINI_API_KEY`
+- set `AUTORESEARCH_WEB_RUN_TOKEN`
+
+The container entrypoint supports two modes:
+
+- `AUTORESEARCH_SERVICE_MODE=web`: start the tiny web server and serve the report on `PORT` or `AUTORESEARCH_WEB_PORT`
+- `AUTORESEARCH_ON_DEMAND=1`: run one iteration on startup, then stay idle so Railway keeps the service up until you manually redeploy it
+- `AUTORESEARCH_RUN_INTERVAL_SECONDS=0` or unset: run one iteration and exit
+- `AUTORESEARCH_RUN_INTERVAL_SECONDS>0`: keep the worker alive and rerun on that interval
+
+Default behavior on Railway when no non-secret overrides are set:
+
+- service mode defaults to `web`
+- ledger path defaults to `/data/history.jsonl`
+- report path defaults to `/data/report.html`
+- web trigger controls default to enabled
+- web trigger strategy defaults to `llm`
+
+Useful web-mode environment variables:
+
+- `AUTORESEARCH_LEDGER_PATH`: optional override for the ledger path, default `/data/history.jsonl` on Railway
+- `AUTORESEARCH_REPORT_PATH`: optional override for the HTML report path, default `/data/report.html` on Railway
+- `AUTORESEARCH_WEB_HOST`: bind host, defaults to `0.0.0.0`
+- `AUTORESEARCH_WEB_PORT`: bind port, defaults to `8000` unless Railway provides `PORT`
+- `AUTORESEARCH_WEB_ENABLE_RUN`: optional override, defaults to enabled on Railway
+- `AUTORESEARCH_WEB_RUN_TOKEN`: bearer token required for `POST /api/run`
+- `AUTORESEARCH_WEB_RUN_STRATEGY`: `library` or `llm`, defaults to `llm` on Railway
+- `AUTORESEARCH_WEB_RUN_TIMEOUT_SECONDS`: timeout for UI-triggered runs, defaults to `600`
+
+Example trigger call:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $AUTORESEARCH_WEB_RUN_TOKEN" \
+  https://<your-service-domain>/api/run
+```
+
+In worker mode, the service does not need to expose an HTTP port. In web mode, Railway should route traffic to the assigned `PORT`.
 
 ## If you need deeper context
 

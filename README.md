@@ -126,7 +126,7 @@ The layout follows the same idea as **evals-101**: sidebar for access and run ac
 Routes:
 
 - `/app`: workspace UI (token field, **Run once (library)** / **Run once (LLM)**, ledger filter, link to raw JSON)
-- `/report/embed`: **only** the rendered experiment report HTML (no injected controls), used by the in-page iframe
+- `/report/embed`: **only** the rendered experiment report HTML (no injected controls). On `/app`, the iframe stays on a placeholder until a run succeeds or you click **Reload report**
 - `/` → redirects to `/app`; `/report` and `/report.html` → redirect to `/report/embed`
 - `/api/history`: ledger JSON plus `strategy_tag` per row and `library_runs` / `llm_runs` counts in `summary`
 - `/health`: lightweight health check

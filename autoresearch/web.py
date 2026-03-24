@@ -321,7 +321,7 @@ APP_SHELL_HTML = """<!DOCTYPE html>
         </section>
         <section class="panel" style="margin-top:14px;">
           <h2>Recent ledger rows</h2>
-          <p class="hint">Newest first. Click a row to highlight; the report viewer shows the full HTML for the whole ledger.</p>
+          <p class="hint">Newest first. Use <strong>Open raw JSON</strong> for full row payloads; the report panel loads HTML only after a run or Reload.</p>
           <div id="status" data-tone="neutral">Ready.</div>
           <div id="runs"></div>
           <p style="margin-top:12px;"><a class="json-link" href="/api/history" target="_blank" rel="noopener">Open raw JSON (/api/history)</a></p>
@@ -331,12 +331,12 @@ APP_SHELL_HTML = """<!DOCTYPE html>
         <div class="viewer-header">
           <div>
             <h2 style="margin:0 0 6px;">Report viewer</h2>
-            <p style="margin:0;font-size:0.9rem;color:var(--muted);">Static experiment report (no controls injected). Reloads after a successful run.</p>
+            <p style="margin:0;font-size:0.9rem;color:var(--muted);">Starts empty. The HTML report loads here after a run succeeds, or when you click Reload report.</p>
           </div>
           <button type="button" class="secondary" id="reload-report">Reload report</button>
         </div>
         <div class="viewer-frame">
-          <iframe id="viewer" title="Autoresearch experiment report" src="/report/embed"></iframe>
+          <iframe id="viewer" title="Autoresearch experiment report" src="about:blank"></iframe>
         </div>
       </section>
     </div>
@@ -351,6 +351,17 @@ APP_SHELL_HTML = """<!DOCTYPE html>
     const filterEl = document.getElementById("filter");
     const statTotal = document.getElementById("stat-total");
     const statSplit = document.getElementById("stat-split");
+
+    const VIEWER_PLACEHOLDER = "<!DOCTYPE html><html lang=\\"en\\"><head><meta charset=\\"utf-8\\"><style>" +
+      "body{margin:0;min-height:70vh;display:grid;place-items:center;font-family:Inter,system-ui,sans-serif;" +
+      "padding:32px;background:#f8fafc;color:#475569;text-align:center;line-height:1.6}" +
+      "strong{color:#0f172a;display:block;margin-bottom:10px;font-size:1.05rem}</style></head><body><div>" +
+      "<strong>No report loaded yet</strong>" +
+      "<p>Run once (library) or Run once (LLM). When the run finishes successfully, the experiment report opens here.</p>" +
+      "<p style=\\"font-size:0.9rem;margin-top:14px\\">Or click <strong>Reload report</strong> to load the latest HTML from the ledger without starting a new run.</p>" +
+      "</div></body></html>";
+
+    viewer.srcdoc = VIEWER_PLACEHOLDER;
 
     tokenInput.value = sessionStorage.getItem(TOKEN_KEY) || "";
 
@@ -380,6 +391,7 @@ APP_SHELL_HTML = """<!DOCTYPE html>
     }
 
     function reloadReport() {
+      viewer.removeAttribute("srcdoc");
       viewer.src = bustReportUrl();
     }
 
